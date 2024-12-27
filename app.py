@@ -11,8 +11,15 @@ def process_excel(file):
     main_sheet = list(data.keys())[0]  # Assume first sheet is the main one
     df = data[main_sheet]
 
+    # Kontrollü sütun adları belirleme
+    expected_columns = {"AE": "AE", "Mağaza Kodu": "Mağaza Kodu"}
+    for col in expected_columns.keys():
+        if col not in df.columns:
+            st.error(f"Sütun bulunamadı: {col}")
+            st.stop()
+
     # Step 1: Add "Unique Count" and "İlişki" columns
-    df["Unique Count"] = df.groupby("AE")["AE"].transform("count") / df["Mağaza Kodu"].nunique()
+    df["Unique Count"] = df.groupby(expected_columns["AE"])[expected_columns["AE"]].transform("count") / df[expected_columns["Mağaza Kodu"]].nunique()
     df["İlişki"] = np.select(
         [df["AF"] == 11, df["AF"] == 10, df["AF"].isna()],
         ["Muadil", "Muadil stoksuz", "İlişki yok"],
