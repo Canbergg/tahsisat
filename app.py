@@ -7,42 +7,33 @@ from io import BytesIO
 # Define the processing function
 def process_excel(file):
     # Load the file into pandas
-    data = pd.read_excel(file, sheet_name=None)  # Load all sheets
-    main_sheet = list(data.keys())[0]  # Assume first sheet is the main one
-    df = data[main_sheet]
-
-    # Kontrollü sütun adları belirleme
-    expected_columns = {"AE": "AE", "Mağaza Kodu": "Mağaza Kodu"}
-    for col in expected_columns.keys():
-        if col not in df.columns:
-            st.error(f"Sütun bulunamadı: {col}")
-            st.stop()
-
-    # Step 1: Add "Unique Count" and "İlişki" columns
-    df["Unique Count"] = df.groupby(expected_columns["AE"])[expected_columns["AE"]].transform("count") / df[expected_columns["Mağaza Kodu"]].nunique()
-    df["İlişki"] = np.select(
-        [df["AF"] == 11, df["AF"] == 10, df["AF"].isna()],
+    df = pd.read_excel(file)  # Load the main sheet
+    
+    # Adım 1: Unique Count ve İlişki sütunlarını ekle
+    df.insert(32, "Unique Count", df.iloc[:, 30].map(df.iloc[:, 30].value_counts()) / df.iloc[:, 0].nunique())
+    df.insert(33, "İlişki", np.select(
+        [df.iloc[:, 31] == 11, df.iloc[:, 31] == 10, df.iloc[:, 31].isna()],
         ["Muadil", "Muadil stoksuz", "İlişki yok"],
         default=""
-    )
-
-    # Step 2: Create "Tekli" sheet
+    ))
+    
+    # Adım 2: Tekli sayfasını oluştur
     tekli = df[df["Unique Count"] == 1]
-    tekli["İhtiyaç"] = tekli.apply(lambda row: max(
+    tekli.insert(34, "İhtiyaç", tekli.apply(lambda row: max(
         max(
             (row["S"] > 0) * round(
                 (row["L"] / row["U"] if row["U"] != 0 else 0) * (row["AC"] if row["AC"] > 0 else row["AK"]), 0
             ) + row["S"] + row["AB"] - row["P"],
             0
         ), 0
-    ), axis=1)
-
-    # Step 3: Create "Çift" sheet
+    ), axis=1))
+    
+    # Adım 3: Çift sayfasını oluştur
     cift = df[df["Unique Count"] == 2]
     cift_sorted = cift.sort_values(by=["Mağaza Adı", "ItAtt48", "Ürün Brüt Ağırlık"], ascending=[True, True, True])
+    cift_sorted.insert(34, "İhtiyaç", "")
 
-    # Step 4: Add "İhtiyaç" column and calculate for merged rows
-    cift_sorted["İhtiyaç"] = ""
+    # Çiftli satırlar için formülleri uygula
     for i in range(0, len(cift_sorted) - 1, 2):
         row1 = cift_sorted.iloc[i]
         row2 = cift_sorted.iloc[i + 1]
@@ -55,12 +46,13 @@ def process_excel(file):
                 0
             ), 0
         )
-        cift_sorted.loc[cift_sorted.index[i], "İhtiyaç"] = value
-        cift_sorted.loc[cift_sorted.index[i + 1], "İhtiyaç"] = ""
+        cift_sorted.at[cift_sorted.index[i], "İhtiyaç"] = value
+        cift_sorted.at[cift_sorted.index[i + 1], "İhtiyaç"] = ""
 
-    cift_sorted["İhtiyaç Çoklama"] = cift_sorted["İhtiyaç"].fillna(method="ffill")
+    # İhtiyaç Çoklama sütununu ekle
+    cift_sorted.insert(35, "İhtiyaç Çoklama", cift_sorted["İhtiyaç"].fillna(method="ffill"))
 
-    # Write back to Excel
+    # İşlenmiş dosyayı oluştur
     output = BytesIO()
     with pd.ExcelWriter(output, engine="openpyxl") as writer:
         df.to_excel(writer, sheet_name="Ana Sayfa", index=False)
