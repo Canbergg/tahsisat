@@ -19,14 +19,23 @@ def process_excel(file):
     
     # Adım 2: Tekli sayfasını oluştur
     tekli = df[df["Unique Count"] == 1].copy()
-    tekli["İhtiyaç"] = tekli.apply(lambda row: max(
-        max(
-            (row["S"] > 0) * round(
-                (row["L"] / row["U"] if row["U"] != 0 else 0) * (row["AC"] if row["AC"] > 0 else row["AK"]), 0
-            ) + row["S"] + row["AB"] - row["P"],
-            0
-        ), 0
-    ), axis=1)
+
+    # Fonksiyon: İhtiyaç hesaplama
+    def calculate_ihitiyac(row):
+        try:
+            return max(
+                max(
+                    (row["S"] > 0) * round(
+                        (row["L"] / row["U"] if row["U"] != 0 else 0) * (row["AC"] if row["AC"] > 0 else row["AK"]), 0
+                    ) + row["S"] + row["AB"] - row["P"],
+                    0
+                ), 0
+            )
+        except:
+            return 0  # Eksik veya hatalı değer varsa 0 döndür
+
+    # Tekli'de "İhtiyaç" hesapla
+    tekli["İhtiyaç"] = tekli.apply(calculate_ihitiyac, axis=1)
     
     # Adım 3: Çift sayfasını oluştur
     cift = df[df["Unique Count"] == 2].copy()
