@@ -8,19 +8,19 @@ def process_excel(file):
     df = pd.read_excel(file)
 
     # Adım 1: AF'nin sağına iki sütun ekle
-    unique_count_column_index = 32  # Yeni Unique Count sütunu
-    relation_column_index = 33  # Yeni İlişki sütunu
+    unique_count_column_index = 40  # Yeni Unique Count sütunu
+    relation_column_index = 41  # Yeni İlişki sütunu
     df.insert(unique_count_column_index, "Unique Count", 0)
     df.insert(relation_column_index, "İlişki", "")
 
-    # Unique Count hesapla (AE -> 30. sütun, Mağaza Kodu -> 1. sütun)
+    # Unique Count hesapla: AE sütunundaki (30) değerlerin Mağaza Koduna (1) göre tekrar sayısı
     df.iloc[:, unique_count_column_index] = (
         df.groupby([df.iloc[:, 1], df.iloc[:, 30]])
         .transform("count")
         .iloc[:, 30]
     )
 
-    # İlişki sütununu doldur
+    # İlişki sütununu doldur: AF sütunundaki (31) değerlere göre
     df.iloc[:, relation_column_index] = np.select(
         [df.iloc[:, 31] == 11, df.iloc[:, 31] == 10, df.iloc[:, 31].isna()],
         ["Muadil", "Muadil stoksuz", "İlişki yok"],
@@ -47,7 +47,9 @@ def process_excel(file):
 
     # Adım 3: Çift sayfasını oluştur
     cift = df[df.iloc[:, unique_count_column_index] == 2].copy()
-    cift_sorted = cift.sort_values(by=[df.columns[0], df.columns[47], df.columns[40]], ascending=[True, True, True])
+
+    # Çift sayfasını Mağaza Adı (7), ItAtt48 (31), ve Ürün Brüt Ağırlık (36) sırasına göre sırala
+    cift_sorted = cift.sort_values(by=[df.columns[6], df.columns[30], df.columns[35]], ascending=[True, True, True])
 
     # Çiftli satırlar için "İhtiyaç" hesapla
     cift_sorted["İhtiyaç"] = ""
@@ -66,6 +68,7 @@ def process_excel(file):
         cift_sorted.at[cift_sorted.index[i], "İhtiyaç"] = value
         cift_sorted.at[cift_sorted.index[i + 1], "İhtiyaç"] = ""
 
+    # Çift sayfasına "İhtiyaç Çoklama" sütunu ekle
     cift_sorted["İhtiyaç Çoklama"] = cift_sorted["İhtiyaç"].fillna(method="ffill")
 
     # Excel dosyasını oluştur
