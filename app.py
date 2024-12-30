@@ -30,55 +30,85 @@ def process_excel(file):
     # Adım 2: Tekli sayfasını oluştur
     tekli = df[df.iloc[:, unique_count_column_index] == 1].copy()
 
-    # Hata ayıklama: Satır ve sütun değerlerini kontrol et
-    def debug_calculate_ihitiyac(row):
+    # Tekli için "İhtiyaç" hesapla
+    def calculate_ihitiyac(row):
         try:
-            # Kullanılan sütun değerlerini yazdır
-            st.write({
-                "Minimum Miktar (S)": row.iloc[18],
-                "Dönem Satış (L)": row.iloc[11],
-                "Envanter Gün Sayısı (U)": row.iloc[20],
-                "ZtStockBeCompletedQty (AC)": row.iloc[28],
-                "StockBeCompleted (AK)": row.iloc[30],
-                "ZtQty (AB)": row.iloc[27],
-                "Kanalda Envanter+Rezerv (P)": row.iloc[15]
-            })
+            # Bölme ve diğer işlemleri güvenli hale getiriyoruz
+            donem_satis = row.iloc[11]
+            envanter_gun_sayisi = row.iloc[20]
+            zt_stock = row.iloc[28]
+            stock_be_completed = row.iloc[30]
+            minimum_miktar = row.iloc[18]
+            zt_qty = row.iloc[27]
+            kanal_envanter = row.iloc[15]
 
-            # Formülü uygula
-            return max(
+            # Hesaplama
+            result = max(
                 0,
                 round(
-                    (row.iloc[11] / row.iloc[20] if row.iloc[20] and row.iloc[20] != 0 else 0) *
-                    (row.iloc[28] if row.iloc[28] and row.iloc[28] > 0 else row.iloc[30]),
+                    (donem_satis / envanter_gun_sayisi if envanter_gun_sayisi > 0 else 0) *
+                    (zt_stock if zt_stock > 0 else stock_be_completed),
                     0
-                ) + (row.iloc[18] if row.iloc[18] else 0) + (row.iloc[27] if row.iloc[27] else 0) - (row.iloc[15] if row.iloc[15] else 0)
+                ) + minimum_miktar + zt_qty - kanal_envanter
             )
+            return result
         except Exception as e:
-            # Hata oluşursa satır bilgilerini yazdır
-            st.write("HATA!", {
-                "Minimum Miktar (S)": row.iloc[18],
-                "Dönem Satış (L)": row.iloc[11],
-                "Envanter Gün Sayısı (U)": row.iloc[20],
-                "ZtStockBeCompletedQty (AC)": row.iloc[28],
-                "StockBeCompleted (AK)": row.iloc[30],
-                "ZtQty (AB)": row.iloc[27],
-                "Kanalda Envanter+Rezerv (P)": row.iloc[15]
-            })
-            st.write("Hata mesajı:", e)
-            return 0
+            st.write(f"Hata oluştu: {e}")
+            return 0  # Hata durumunda varsayılan değer
 
-    # Tekli için "İhtiyaç" hesapla
-    tekli["İhtiyaç"] = tekli.apply(debug_calculate_ihitiyac, axis=1)
+    tekli["İhtiyaç"] = tekli.apply(calculate_ihitiyac, axis=1)
 
-    # Çift sayfasını oluştur (bu adımı daha sonra tamamlayacağız)
+    # Çift sayfasını oluştur
     cift = df[df.iloc[:, unique_count_column_index] == 2].copy()
+
+    # Çift için "İhtiyaç" hesapla
+    def calculate_ihitiyac_cift(row1, row2):
+        try:
+            donem_satis1 = row1.iloc[11]
+            donem_satis2 = row2.iloc[11]
+            envanter_gun_sayisi1 = row1.iloc[20]
+            envanter_gun_sayisi2 = row2.iloc[20]
+            zt_stock2 = row2.iloc[28]
+            stock_be_completed2 = row2.iloc[30]
+            minimum_miktar2 = row2.iloc[18]
+            zt_qty1 = row1.iloc[27]
+            zt_qty2 = row2.iloc[27]
+            kanal_envanter1 = row1.iloc[15]
+            kanal_envanter2 = row2.iloc[15]
+
+            # Hesaplama
+            result = max(
+                0,
+                round(
+                    (donem_satis1 + donem_satis2) / max(envanter_gun_sayisi1, envanter_gun_sayisi2) *
+                    (zt_stock2 if zt_stock2 > 0 else stock_be_completed2),
+                    0
+                ) + minimum_miktar2 + zt_qty1 + zt_qty2 - kanal_envanter1 - kanal_envanter2
+            )
+            return result
+        except Exception as e:
+            st.write(f"Hata oluştu (çift hesaplama): {e}")
+            return 0  # Hata durumunda varsayılan değer
+
+    # Çift sayfasında hesaplama
+    cift_sorted = cift.sort_values(by=[df.columns[6], df.columns[30], df.columns[35]], ascending=[True, True, True])
+    cift_sorted["İhtiyaç"] = ""
+    for i in range(0, len(cift_sorted) - 1, 2):
+        row1 = cift_sorted.iloc[i]
+        row2 = cift_sorted.iloc[i + 1]
+        value = calculate_ihitiyac_cift(row1, row2)
+        cift_sorted.at[cift_sorted.index[i], "İhtiyaç"] = value
+        cift_sorted.at[cift_sorted.index[i + 1], "İhtiyaç"] = ""
+
+    # Çift sayfasına "İhtiyaç Çoklama" sütunu ekle
+    cift_sorted["İhtiyaç Çoklama"] = cift_sorted["İhtiyaç"].fillna(method="ffill")
 
     # Excel dosyasını oluştur
     output = BytesIO()
     with pd.ExcelWriter(output, engine="openpyxl") as writer:
         df.to_excel(writer, sheet_name="Ana Sayfa", index=False)
         tekli.to_excel(writer, sheet_name="Tekli", index=False)
-        cift.to_excel(writer, sheet_name="Çift", index=False)
+        cift_sorted.to_excel(writer, sheet_name="Çift", index=False)
     output.seek(0)
     return output
 
