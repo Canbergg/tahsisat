@@ -13,9 +13,9 @@ def process_excel(file):
     df.insert(unique_count_column_index, "Unique Count", 0)
     df.insert(relation_column_index, "İlişki", "")
 
-    # Unique Count hesapla (AE -> 30. sütun, Mağaza Kodu -> 1. sütun)
+    # Unique Count hesapla (ItAtt48 -> 31. sütun, Mağaza Kodu -> 7. sütun)
     df.iloc[:, unique_count_column_index] = (
-        df.groupby([df.iloc[:, 1], df.iloc[:, 30]])
+        df.groupby([df.iloc[:, 6], df.iloc[:, 30]])
         .transform("count")
         .iloc[:, 30]
     )
