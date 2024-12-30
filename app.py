@@ -8,15 +8,18 @@ def process_excel(file):
     df = pd.read_excel(file)
 
     # Adım 1: AF'nin sağına iki sütun ekle
-    # AF -> 31. sütun
     unique_count_column_index = 32  # Yeni Unique Count sütunu
     relation_column_index = 33  # Yeni İlişki sütunu
-
     df.insert(unique_count_column_index, "Unique Count", 0)
     df.insert(relation_column_index, "İlişki", "")
 
-    # Unique Count hesapla (AE -> 30. sütun, Mağaza Kodu -> 1. sütun)
-    df["Unique Count"] = df.iloc[:, 30].map(df.iloc[:, 30].value_counts()) / df.iloc[:, 1].nunique()
+    # Unique Count hesapla: AE sütunundaki değerlerin mağaza koduna göre tekrar sayısı
+    # AE -> 30. sütun, Mağaza Kodu -> 1. sütun
+    df["Unique Count"] = (
+        df.groupby([df.iloc[:, 1], df.iloc[:, 30]])
+        .transform("count")
+        .iloc[:, 30]
+    )
 
     # İlişki sütununu doldur
     df["İlişki"] = np.select(
