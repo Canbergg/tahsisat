@@ -30,51 +30,55 @@ def process_excel(file):
     # Adım 2: Tekli sayfasını oluştur
     tekli = df[df.iloc[:, unique_count_column_index] == 1].copy()
 
-    # Tekli için "İhtiyaç" hesapla
-    tekli["İhtiyaç"] = tekli.apply(lambda row: max(
-        0,
-        round(
-            (row.iloc[11] / row.iloc[20] if row.iloc[20] != 0 else 0) * (row.iloc[28] if row.iloc[28] > 0 else row.iloc[30]),
-            0
-        ) + row.iloc[18] + row.iloc[27] - row.iloc[15]
-    ), axis=1)
+    # Hata ayıklama: Satır ve sütun değerlerini kontrol et
+    def debug_calculate_ihitiyac(row):
+        try:
+            # Kullanılan sütun değerlerini yazdır
+            st.write({
+                "Minimum Miktar (S)": row.iloc[18],
+                "Dönem Satış (L)": row.iloc[11],
+                "Envanter Gün Sayısı (U)": row.iloc[20],
+                "ZtStockBeCompletedQty (AC)": row.iloc[28],
+                "StockBeCompleted (AK)": row.iloc[30],
+                "ZtQty (AB)": row.iloc[27],
+                "Kanalda Envanter+Rezerv (P)": row.iloc[15]
+            })
 
-    # Adım 3: Çift sayfasını oluştur
-    cift = df[df.iloc[:, unique_count_column_index] == 2].copy()
-
-    # Çift sayfasını Mağaza Adı (7), ItAtt48 (31), ve Ürün Brüt Ağırlık (36) sırasına göre sırala
-    cift_sorted = cift.sort_values(by=[df.columns[6], df.columns[30], df.columns[35]], ascending=[True, True, True])
-
-    # Çift için "İhtiyaç" hesapla
-    cift_sorted["İhtiyaç"] = ""
-    for i in range(0, len(cift_sorted) - 1, 2):
-        row1 = cift_sorted.iloc[i]
-        row2 = cift_sorted.iloc[i + 1]
-
-        # Çiftli satırlar için formülü uygula
-        value = max(
-            0,
-            max(
+            # Formülü uygula
+            return max(
+                0,
                 round(
-                    (row1.iloc[11] + row2.iloc[11]) / max(row1.iloc[20], row2.iloc[20]) *
-                    (row2.iloc[28] if row2.iloc[28] > 0 else row2.iloc[30]),
+                    (row.iloc[11] / row.iloc[20] if row.iloc[20] and row.iloc[20] != 0 else 0) *
+                    (row.iloc[28] if row.iloc[28] and row.iloc[28] > 0 else row.iloc[30]),
                     0
-                ) + row2.iloc[18] + sum([row1.iloc[27], row2.iloc[27]]) - sum([row1.iloc[15], row2.iloc[15]]),
-                0
+                ) + (row.iloc[18] if row.iloc[18] else 0) + (row.iloc[27] if row.iloc[27] else 0) - (row.iloc[15] if row.iloc[15] else 0)
             )
-        )
-        cift_sorted.at[cift_sorted.index[i], "İhtiyaç"] = value
-        cift_sorted.at[cift_sorted.index[i + 1], "İhtiyaç"] = ""
+        except Exception as e:
+            # Hata oluşursa satır bilgilerini yazdır
+            st.write("HATA!", {
+                "Minimum Miktar (S)": row.iloc[18],
+                "Dönem Satış (L)": row.iloc[11],
+                "Envanter Gün Sayısı (U)": row.iloc[20],
+                "ZtStockBeCompletedQty (AC)": row.iloc[28],
+                "StockBeCompleted (AK)": row.iloc[30],
+                "ZtQty (AB)": row.iloc[27],
+                "Kanalda Envanter+Rezerv (P)": row.iloc[15]
+            })
+            st.write("Hata mesajı:", e)
+            return 0
 
-    # Çift sayfasına "İhtiyaç Çoklama" sütunu ekle
-    cift_sorted["İhtiyaç Çoklama"] = cift_sorted["İhtiyaç"].fillna(method="ffill")
+    # Tekli için "İhtiyaç" hesapla
+    tekli["İhtiyaç"] = tekli.apply(debug_calculate_ihitiyac, axis=1)
+
+    # Çift sayfasını oluştur (bu adımı daha sonra tamamlayacağız)
+    cift = df[df.iloc[:, unique_count_column_index] == 2].copy()
 
     # Excel dosyasını oluştur
     output = BytesIO()
     with pd.ExcelWriter(output, engine="openpyxl") as writer:
         df.to_excel(writer, sheet_name="Ana Sayfa", index=False)
         tekli.to_excel(writer, sheet_name="Tekli", index=False)
-        cift_sorted.to_excel(writer, sheet_name="Çift", index=False)
+        cift.to_excel(writer, sheet_name="Çift", index=False)
     output.seek(0)
     return output
 
