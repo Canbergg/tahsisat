@@ -13,14 +13,14 @@ def process_excel(file):
     df.insert(unique_count_column_index, "Unique Count", 0)
     df.insert(relation_column_index, "İlişki", "")
 
-    # Unique Count hesapla: AE sütunundaki (30) değerlerin Mağaza Koduna (1) göre tekrar sayısı
+    # Unique Count hesapla (AE -> 30. sütun, Mağaza Kodu -> 1. sütun)
     df.iloc[:, unique_count_column_index] = (
         df.groupby([df.iloc[:, 1], df.iloc[:, 30]])
         .transform("count")
         .iloc[:, 30]
     )
 
-    # İlişki sütununu doldur: AF sütunundaki (31) değerlere göre
+    # İlişki sütununu doldur (AF -> 31. sütun)
     df.iloc[:, relation_column_index] = np.select(
         [df.iloc[:, 31] == 11, df.iloc[:, 31] == 10, df.iloc[:, 31].isna()],
         ["Muadil", "Muadil stoksuz", "İlişki yok"],
@@ -36,7 +36,7 @@ def process_excel(file):
             return max(
                 max(
                     (row.iloc[18] > 0) * round(
-                        (row.iloc[11] / row.iloc[20] if row.iloc[20] != 0 else 0) * (row.iloc[28] if row.iloc[28] > 0 else row.iloc[30]), 0
+                        (row.iloc[11] / row.iloc[35] if row.iloc[35] != 0 else 0) * (row.iloc[28] if row.iloc[28] > 0 else row.iloc[30]), 0
                     ) + row.iloc[18] + row.iloc[26] - row.iloc[15],
                     0
                 ), 0
@@ -59,7 +59,7 @@ def process_excel(file):
         value = max(
             max(
                 sum([row1.iloc[18], row2.iloc[18]]) > 0 * round(
-                    sum([row1.iloc[11], row2.iloc[11]]) / max(row1.iloc[20], row2.iloc[20]) * (row2.iloc[28] if row2.iloc[28] > 0 else row2.iloc[30]),
+                    sum([row1.iloc[11], row2.iloc[11]]) / max(row1.iloc[35], row2.iloc[35]) * (row2.iloc[28] if row2.iloc[28] > 0 else row2.iloc[30]),
                     0
                 ) + row2.iloc[18] + sum([row1.iloc[26], row2.iloc[26]]) - sum([row1.iloc[15], row2.iloc[15]]),
                 0
