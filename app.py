@@ -8,19 +8,21 @@ from io import BytesIO
 def process_excel(file):
     # Load the file into pandas
     df = pd.read_excel(file)  # Load the main sheet
-
-    # Adım 1: Unique Count ve İlişki sütunlarını ekle
+    
+    # Adım 1: Unique Count hesaplama
+    # AE sütunu -> 30. sütun, Mağaza Kodu sütunu -> 0. sütun
     df["Unique Count"] = df.iloc[:, 30].map(df.iloc[:, 30].value_counts()) / df.iloc[:, 0].nunique()
+    
+    # Adım 2: İlişki sütunu ekle
+    # AF sütunu -> 31. sütun
     df["İlişki"] = np.select(
         [df.iloc[:, 31] == 11, df.iloc[:, 31] == 10, df.iloc[:, 31].isna()],
         ["Muadil", "Muadil stoksuz", "İlişki yok"],
         default=""
     )
     
-    # Adım 2: Tekli sayfasını oluştur
+    # Adım 3: Tekli sayfasını oluştur
     tekli = df[df["Unique Count"] == 1].copy()
-
-    # Fonksiyon: İhtiyaç hesaplama
     def calculate_ihitiyac(row):
         try:
             return max(
@@ -32,12 +34,10 @@ def process_excel(file):
                 ), 0
             )
         except:
-            return 0  # Eksik veya hatalı değer varsa 0 döndür
-
-    # Tekli'de "İhtiyaç" hesapla
+            return 0
     tekli["İhtiyaç"] = tekli.apply(calculate_ihitiyac, axis=1)
     
-    # Adım 3: Çift sayfasını oluştur
+    # Adım 4: Çift sayfasını oluştur
     cift = df[df["Unique Count"] == 2].copy()
     cift_sorted = cift.sort_values(by=["Mağaza Adı", "ItAtt48", "Ürün Brüt Ağırlık"], ascending=[True, True, True])
     cift_sorted["İhtiyaç"] = ""
