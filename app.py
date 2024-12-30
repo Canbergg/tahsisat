@@ -1,28 +1,28 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
-from openpyxl import Workbook, load_workbook
 from io import BytesIO
 
-# Define the processing function
 def process_excel(file):
-    # Load the file into pandas
-    df = pd.read_excel(file)  # Load the main sheet
-    
-    # Adım 1: Unique Count hesaplama
-    # AE sütunu -> 30. sütun, Mağaza Kodu sütunu -> 0. sütun
-    df["Unique Count"] = df.iloc[:, 30].map(df.iloc[:, 30].value_counts()) / df.iloc[:, 0].nunique()
-    
-    # Adım 2: İlişki sütunu ekle
-    # AF sütunu -> 31. sütun
+    # Dosyayı yükle
+    df = pd.read_excel(file)
+
+    # Adım 1: Unique Count sütununu ekle
+    # AE -> 30. sütun, Mağaza Kodu -> 1. sütun
+    df["Unique Count"] = df.iloc[:, 30].map(df.iloc[:, 30].value_counts()) / df.iloc[:, 1].nunique()
+
+    # Adım 2: İlişki sütununu ekle
+    # AF -> 31. sütun
     df["İlişki"] = np.select(
         [df.iloc[:, 31] == 11, df.iloc[:, 31] == 10, df.iloc[:, 31].isna()],
         ["Muadil", "Muadil stoksuz", "İlişki yok"],
         default=""
     )
-    
+
     # Adım 3: Tekli sayfasını oluştur
     tekli = df[df["Unique Count"] == 1].copy()
+
+    # Tekli için "İhtiyaç" hesapla
     def calculate_ihitiyac(row):
         try:
             return max(
@@ -36,13 +36,13 @@ def process_excel(file):
         except:
             return 0
     tekli["İhtiyaç"] = tekli.apply(calculate_ihitiyac, axis=1)
-    
+
     # Adım 4: Çift sayfasını oluştur
     cift = df[df["Unique Count"] == 2].copy()
     cift_sorted = cift.sort_values(by=["Mağaza Adı", "ItAtt48", "Ürün Brüt Ağırlık"], ascending=[True, True, True])
-    cift_sorted["İhtiyaç"] = ""
 
-    # Çiftli satırlar için formülleri uygula
+    # Çiftli satırlar için "İhtiyaç" hesapla
+    cift_sorted["İhtiyaç"] = ""
     for i in range(0, len(cift_sorted) - 1, 2):
         row1 = cift_sorted.iloc[i]
         row2 = cift_sorted.iloc[i + 1]
@@ -58,9 +58,10 @@ def process_excel(file):
         cift_sorted.loc[cift_sorted.index[i], "İhtiyaç"] = value
         cift_sorted.loc[cift_sorted.index[i + 1], "İhtiyaç"] = ""
 
+    # Çift için İhtiyaç Çoklama
     cift_sorted["İhtiyaç Çoklama"] = cift_sorted["İhtiyaç"].fillna(method="ffill")
 
-    # İşlenmiş dosyayı oluştur
+    # Excel dosyasını oluştur
     output = BytesIO()
     with pd.ExcelWriter(output, engine="openpyxl") as writer:
         df.to_excel(writer, sheet_name="Ana Sayfa", index=False)
@@ -74,6 +75,6 @@ st.title("Excel İşleme Aracı")
 uploaded_file = st.file_uploader("Excel dosyanızı yükleyin", type=["xlsx"])
 
 if uploaded_file:
-    st.success("Dosya yüklendi. İşlemler yapılıyor...")
+    st.success("Dosya başarıyla yüklendi, işlemler yapılıyor...")
     processed_file = process_excel(uploaded_file)
     st.download_button("İşlenmiş Dosyayı İndir", processed_file, file_name="Processed_File.xlsx")
