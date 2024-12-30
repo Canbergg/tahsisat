@@ -7,9 +7,9 @@ def process_excel(file):
     # Dosyayı yükle
     df = pd.read_excel(file)
 
-    # Adım 1: AF'nin sağına iki sütun ekle
-    unique_count_column_index = 40  # Yeni Unique Count sütunu
-    relation_column_index = 41  # Yeni İlişki sütunu
+    # Adım 1: 32. sütunun sağına iki yeni sütun ekle
+    unique_count_column_index = 33  # Yeni Unique Count sütunu
+    relation_column_index = 34  # Yeni İlişki sütunu
     df.insert(unique_count_column_index, "Unique Count", 0)
     df.insert(relation_column_index, "İlişki", "")
 
