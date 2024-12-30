@@ -31,19 +31,13 @@ def process_excel(file):
     tekli = df[df.iloc[:, unique_count_column_index] == 1].copy()
 
     # Tekli için "İhtiyaç" hesapla
-    def calculate_ihitiyac(row):
-        try:
-            return max(
-                max(
-                    (row.iloc[18] > 0) * round(
-                        (row.iloc[11] / row.iloc[35] if row.iloc[35] != 0 else 0) * (row.iloc[28] if row.iloc[28] > 0 else row.iloc[30]), 0
-                    ) + row.iloc[18] + row.iloc[26] - row.iloc[15],
-                    0
-                ), 0
-            )
-        except:
-            return 0
-    tekli["İhtiyaç"] = tekli.apply(calculate_ihitiyac, axis=1)
+    tekli["İhtiyaç"] = tekli.apply(lambda row: max(
+        0,
+        (row.iloc[18] > 0) * round(
+            (row.iloc[11] / row.iloc[20] if row.iloc[20] != 0 else 0) * (row.iloc[28] if row.iloc[28] > 0 else row.iloc[30]),
+            0
+        ) + row.iloc[18] + row.iloc[26] - row.iloc[15]
+    ), axis=1)
 
     # Adım 3: Çift sayfasını oluştur
     cift = df[df.iloc[:, unique_count_column_index] == 2].copy()
@@ -51,29 +45,24 @@ def process_excel(file):
     # Çift sayfasını Mağaza Adı (7), ItAtt48 (31), ve Ürün Brüt Ağırlık (36) sırasına göre sırala
     cift_sorted = cift.sort_values(by=[df.columns[6], df.columns[30], df.columns[35]], ascending=[True, True, True])
 
-    # Çiftli satırlar için "İhtiyaç" hesapla
+    # Çift için "İhtiyaç" hesapla
     cift_sorted["İhtiyaç"] = ""
     for i in range(0, len(cift_sorted) - 1, 2):
         row1 = cift_sorted.iloc[i]
         row2 = cift_sorted.iloc[i + 1]
 
-        # Hücre değerlerini kontrol et ve boş ya da geçersiz değerleri 0 olarak kullan
-        s1 = row1.iloc[11] if pd.api.types.is_numeric_dtype(row1.iloc[11]) else 0
-        s2 = row2.iloc[11] if pd.api.types.is_numeric_dtype(row2.iloc[11]) else 0
-        u1 = row1.iloc[35] if pd.api.types.is_numeric_dtype(row1.iloc[35]) else 0
-        u2 = row2.iloc[35] if pd.api.types.is_numeric_dtype(row2.iloc[35]) else 0
-        ac2 = row2.iloc[28] if pd.api.types.is_numeric_dtype(row2.iloc[28]) else 0
-        ak2 = row2.iloc[30] if pd.api.types.is_numeric_dtype(row2.iloc[30]) else 0
-
-        # İhtiyaç hesaplama
+        # Çiftli satırlar için formülü uygula
         value = max(
+            0,
             max(
-                sum([s1, s2]) > 0 * round(
-                    sum([s1, s2]) / max(u1, u2) * (ac2 if ac2 > 0 else ak2),
+                sum([row1.iloc[18], row2.iloc[18]]) > 0 and
+                round(
+                    sum([row1.iloc[11], row2.iloc[11]]) / max(row1.iloc[20], row2.iloc[20]) *
+                    (row2.iloc[28] if row2.iloc[28] > 0 else row2.iloc[30]),
                     0
-                ) + s2 + sum([row1.iloc[26], row2.iloc[26]]) - sum([row1.iloc[15], row2.iloc[15]]),
+                ) + row2.iloc[18] + sum([row1.iloc[26], row2.iloc[26]]) - sum([row1.iloc[15], row2.iloc[15]]),
                 0
-            ), 0
+            )
         )
         cift_sorted.at[cift_sorted.index[i], "İhtiyaç"] = value
         cift_sorted.at[cift_sorted.index[i + 1], "İhtiyaç"] = ""
