@@ -13,32 +13,31 @@ def process_excel(file):
     df.insert(unique_count_column_index, "Unique Count", 0)
     df.insert(relation_column_index, "İlişki", "")
 
-    # Unique Count hesapla: AE sütunundaki değerlerin mağaza koduna göre tekrar sayısı
-    # AE -> 30. sütun, Mağaza Kodu -> 1. sütun
-    df["Unique Count"] = (
+    # Unique Count hesapla (AE -> 30. sütun, Mağaza Kodu -> 1. sütun)
+    df.iloc[:, unique_count_column_index] = (
         df.groupby([df.iloc[:, 1], df.iloc[:, 30]])
         .transform("count")
         .iloc[:, 30]
     )
 
     # İlişki sütununu doldur
-    df["İlişki"] = np.select(
+    df.iloc[:, relation_column_index] = np.select(
         [df.iloc[:, 31] == 11, df.iloc[:, 31] == 10, df.iloc[:, 31].isna()],
         ["Muadil", "Muadil stoksuz", "İlişki yok"],
         default=""
     )
 
     # Adım 2: Tekli sayfasını oluştur
-    tekli = df[df["Unique Count"] == 1].copy()
+    tekli = df[df.iloc[:, unique_count_column_index] == 1].copy()
 
     # Tekli için "İhtiyaç" hesapla
     def calculate_ihitiyac(row):
         try:
             return max(
                 max(
-                    (row["S"] > 0) * round(
-                        (row["L"] / row["U"] if row["U"] != 0 else 0) * (row["AC"] if row["AC"] > 0 else row["AK"]), 0
-                    ) + row["S"] + row["AB"] - row["P"],
+                    (row.iloc[18] > 0) * round(
+                        (row.iloc[11] / row.iloc[20] if row.iloc[20] != 0 else 0) * (row.iloc[28] if row.iloc[28] > 0 else row.iloc[30]), 0
+                    ) + row.iloc[18] + row.iloc[26] - row.iloc[15],
                     0
                 ), 0
             )
@@ -47,8 +46,8 @@ def process_excel(file):
     tekli["İhtiyaç"] = tekli.apply(calculate_ihitiyac, axis=1)
 
     # Adım 3: Çift sayfasını oluştur
-    cift = df[df["Unique Count"] == 2].copy()
-    cift_sorted = cift.sort_values(by=["Mağaza Adı", "ItAtt48", "Ürün Brüt Ağırlık"], ascending=[True, True, True])
+    cift = df[df.iloc[:, unique_count_column_index] == 2].copy()
+    cift_sorted = cift.sort_values(by=[df.columns[0], df.columns[47], df.columns[40]], ascending=[True, True, True])
 
     # Çiftli satırlar için "İhtiyaç" hesapla
     cift_sorted["İhtiyaç"] = ""
@@ -57,15 +56,15 @@ def process_excel(file):
         row2 = cift_sorted.iloc[i + 1]
         value = max(
             max(
-                sum([row1["S"], row2["S"]]) > 0 * round(
-                    sum([row1["L"], row2["L"]]) / max(row1["U"], row2["U"]) * (row2["AC"] if row2["AC"] > 0 else row2["AK"]),
+                sum([row1.iloc[18], row2.iloc[18]]) > 0 * round(
+                    sum([row1.iloc[11], row2.iloc[11]]) / max(row1.iloc[20], row2.iloc[20]) * (row2.iloc[28] if row2.iloc[28] > 0 else row2.iloc[30]),
                     0
-                ) + row2["S"] + sum([row1["AB"], row2["AB"]]) - sum([row1["P"], row2["P"]]),
+                ) + row2.iloc[18] + sum([row1.iloc[26], row2.iloc[26]]) - sum([row1.iloc[15], row2.iloc[15]]),
                 0
             ), 0
         )
-        cift_sorted.loc[cift_sorted.index[i], "İhtiyaç"] = value
-        cift_sorted.loc[cift_sorted.index[i + 1], "İhtiyaç"] = ""
+        cift_sorted.at[cift_sorted.index[i], "İhtiyaç"] = value
+        cift_sorted.at[cift_sorted.index[i + 1], "İhtiyaç"] = ""
 
     cift_sorted["İhtiyaç Çoklama"] = cift_sorted["İhtiyaç"].fillna(method="ffill")
 
