@@ -33,14 +33,14 @@ def process_excel(file):
     # Tekli için "İhtiyaç" hesapla
     def calculate_ihitiyac(row):
         try:
-            # Bölme ve diğer işlemleri güvenli hale getiriyoruz
-            donem_satis = row.iloc[11]
-            envanter_gun_sayisi = row.iloc[20]
-            zt_stock = row.iloc[28]
-            stock_be_completed = row.iloc[30]
-            minimum_miktar = row.iloc[18]
-            zt_qty = row.iloc[27]
-            kanal_envanter = row.iloc[15]
+            # Sütun değerlerini sayısal veri tipine çevir
+            donem_satis = pd.to_numeric(row.iloc[11], errors="coerce") or 0
+            envanter_gun_sayisi = pd.to_numeric(row.iloc[20], errors="coerce") or 0
+            zt_stock = pd.to_numeric(row.iloc[28], errors="coerce") or 0
+            stock_be_completed = pd.to_numeric(row.iloc[30], errors="coerce") or 0
+            minimum_miktar = pd.to_numeric(row.iloc[18], errors="coerce") or 0
+            zt_qty = pd.to_numeric(row.iloc[27], errors="coerce") or 0
+            kanal_envanter = pd.to_numeric(row.iloc[15], errors="coerce") or 0
 
             # Hesaplama
             result = max(
@@ -64,17 +64,18 @@ def process_excel(file):
     # Çift için "İhtiyaç" hesapla
     def calculate_ihitiyac_cift(row1, row2):
         try:
-            donem_satis1 = row1.iloc[11]
-            donem_satis2 = row2.iloc[11]
-            envanter_gun_sayisi1 = row1.iloc[20]
-            envanter_gun_sayisi2 = row2.iloc[20]
-            zt_stock2 = row2.iloc[28]
-            stock_be_completed2 = row2.iloc[30]
-            minimum_miktar2 = row2.iloc[18]
-            zt_qty1 = row1.iloc[27]
-            zt_qty2 = row2.iloc[27]
-            kanal_envanter1 = row1.iloc[15]
-            kanal_envanter2 = row2.iloc[15]
+            # Sütun değerlerini sayısal veri tipine çevir
+            donem_satis1 = pd.to_numeric(row1.iloc[11], errors="coerce") or 0
+            donem_satis2 = pd.to_numeric(row2.iloc[11], errors="coerce") or 0
+            envanter_gun_sayisi1 = pd.to_numeric(row1.iloc[20], errors="coerce") or 0
+            envanter_gun_sayisi2 = pd.to_numeric(row2.iloc[20], errors="coerce") or 0
+            zt_stock2 = pd.to_numeric(row2.iloc[28], errors="coerce") or 0
+            stock_be_completed2 = pd.to_numeric(row2.iloc[30], errors="coerce") or 0
+            minimum_miktar2 = pd.to_numeric(row2.iloc[18], errors="coerce") or 0
+            zt_qty1 = pd.to_numeric(row1.iloc[27], errors="coerce") or 0
+            zt_qty2 = pd.to_numeric(row2.iloc[27], errors="coerce") or 0
+            kanal_envanter1 = pd.to_numeric(row1.iloc[15], errors="coerce") or 0
+            kanal_envanter2 = pd.to_numeric(row2.iloc[15], errors="coerce") or 0
 
             # Hesaplama
             result = max(
