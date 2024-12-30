@@ -56,12 +56,22 @@ def process_excel(file):
     for i in range(0, len(cift_sorted) - 1, 2):
         row1 = cift_sorted.iloc[i]
         row2 = cift_sorted.iloc[i + 1]
+
+        # Hücre değerlerini kontrol et ve boş ya da geçersiz değerleri 0 olarak kullan
+        s1 = row1.iloc[11] if pd.api.types.is_numeric_dtype(row1.iloc[11]) else 0
+        s2 = row2.iloc[11] if pd.api.types.is_numeric_dtype(row2.iloc[11]) else 0
+        u1 = row1.iloc[35] if pd.api.types.is_numeric_dtype(row1.iloc[35]) else 0
+        u2 = row2.iloc[35] if pd.api.types.is_numeric_dtype(row2.iloc[35]) else 0
+        ac2 = row2.iloc[28] if pd.api.types.is_numeric_dtype(row2.iloc[28]) else 0
+        ak2 = row2.iloc[30] if pd.api.types.is_numeric_dtype(row2.iloc[30]) else 0
+
+        # İhtiyaç hesaplama
         value = max(
             max(
-                sum([row1.iloc[18], row2.iloc[18]]) > 0 * round(
-                    sum([row1.iloc[11], row2.iloc[11]]) / max(row1.iloc[35], row2.iloc[35]) * (row2.iloc[28] if row2.iloc[28] > 0 else row2.iloc[30]),
+                sum([s1, s2]) > 0 * round(
+                    sum([s1, s2]) / max(u1, u2) * (ac2 if ac2 > 0 else ak2),
                     0
-                ) + row2.iloc[18] + sum([row1.iloc[26], row2.iloc[26]]) - sum([row1.iloc[15], row2.iloc[15]]),
+                ) + s2 + sum([row1.iloc[26], row2.iloc[26]]) - sum([row1.iloc[15], row2.iloc[15]]),
                 0
             ), 0
         )
