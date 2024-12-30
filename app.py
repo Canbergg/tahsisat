@@ -33,10 +33,10 @@ def process_excel(file):
     # Tekli için "İhtiyaç" hesapla
     tekli["İhtiyaç"] = tekli.apply(lambda row: max(
         0,
-        (row.iloc[18] > 0) * round(
+        round(
             (row.iloc[11] / row.iloc[20] if row.iloc[20] != 0 else 0) * (row.iloc[28] if row.iloc[28] > 0 else row.iloc[30]),
             0
-        ) + row.iloc[18] + row.iloc[26] - row.iloc[15]
+        ) + row.iloc[18] + row.iloc[27] - row.iloc[15]
     ), axis=1)
 
     # Adım 3: Çift sayfasını oluştur
@@ -55,12 +55,11 @@ def process_excel(file):
         value = max(
             0,
             max(
-                sum([row1.iloc[18], row2.iloc[18]]) > 0 and
                 round(
-                    sum([row1.iloc[11], row2.iloc[11]]) / max(row1.iloc[20], row2.iloc[20]) *
+                    (row1.iloc[11] + row2.iloc[11]) / max(row1.iloc[20], row2.iloc[20]) *
                     (row2.iloc[28] if row2.iloc[28] > 0 else row2.iloc[30]),
                     0
-                ) + row2.iloc[18] + sum([row1.iloc[26], row2.iloc[26]]) - sum([row1.iloc[15], row2.iloc[15]]),
+                ) + row2.iloc[18] + sum([row1.iloc[27], row2.iloc[27]]) - sum([row1.iloc[15], row2.iloc[15]]),
                 0
             )
         )
