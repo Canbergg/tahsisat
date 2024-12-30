@@ -18,7 +18,7 @@ def process_excel(file):
     )
     
     # Adım 2: Tekli sayfasını oluştur
-    tekli = df[df["Unique Count"] == 1]
+    tekli = df[df["Unique Count"] == 1].copy()
     tekli["İhtiyaç"] = tekli.apply(lambda row: max(
         max(
             (row["S"] > 0) * round(
@@ -29,7 +29,7 @@ def process_excel(file):
     ), axis=1)
     
     # Adım 3: Çift sayfasını oluştur
-    cift = df[df["Unique Count"] == 2]
+    cift = df[df["Unique Count"] == 2].copy()
     cift_sorted = cift.sort_values(by=["Mağaza Adı", "ItAtt48", "Ürün Brüt Ağırlık"], ascending=[True, True, True])
     cift_sorted["İhtiyaç"] = ""
 
